@@ -1,4 +1,4 @@
-#🤖 Custom AI Agent Builder
+🤖 Custom AI Agent Builder
 This project provides a simple, single-file web application that serves as a flexible framework for building custom AI agents using the Gemini API. It allows users to control the agent's Persona, Task, and Output Structure (JSON or standard text).
 
 This project was built step-by-step to demonstrate core concepts of modern LLM application development.
