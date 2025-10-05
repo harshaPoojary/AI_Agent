@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom AI Agent Builder</title>
+    <!-- Load Tailwind CSS for modern, responsive styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles that support the dark: prefix from Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s;
+        }
+        /* Custom spinner color for dual-theme visibility */
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #8b5cf6; /* Violet-500 */
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-slate-900 min-h-screen p-4 md:p-8 flex items-start justify-center">
+
+    <div id="app" class="w-full max-w-5xl">
+        <h1 class="text-3xl font-bold text-gray-800 dark:text-white mb-6 text-center">Custom AI Agent Builder</h1>
+        <div class="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-xl shadow-2xl transition-colors">
+            
+            <!-- 1. Agent Configuration Section (The Persona) -->
+            <div class="mb-6">
+                <label for="systemInstruction" class="block text-sm font-medium text-violet-600 dark:text-violet-400 mb-2">1. Agent's System Instruction (Persona & Rules)</label>
+                <textarea id="systemInstruction" rows="4" class="w-full rounded-lg p-3 text-sm border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-violet-500 focus:border-violet-500" placeholder="Example: You are a meticulous recipe assistant. Do not use conversational language.">
+Your only task is to extract information and return it in the provided JSON format.
+                </textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- 2. Output Type Selector -->
+                <div class="p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                    <label for="responseType" class="block text-sm font-medium text-gray-700 dark:text-violet-400 mb-2">2. Output Type</label>
+                    <select id="responseType" class="w-full rounded-lg p-2 text-sm border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-violet-500 focus:border-violet-500">
+                        <option value="text">Standard Text Output (Markdown)</option>
+                        <option value="json" selected>Structured JSON Output (Guaranteed)</option>
+                    </select>
+                </div>
+
+                <!-- 3. JSON Schema Input -->
+                <div id="jsonSchemaContainer" class="p-4 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                    <label for="jsonSchema" class="block text-sm font-medium text-gray-700 dark:text-violet-400 mb-2">3. JSON Response Schema (Defines required structure)</label>
+                    <textarea id="jsonSchema" rows="8" class="w-full rounded-lg p-3 text-xs font-mono border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-800 dark:text-white focus:ring-violet-500 focus:border-violet-500">
+{
+    "type": "OBJECT",
+    "properties": {
+        "breed_1": { "type": "STRING" },
+        "weight_1_kg": { "type": "STRING" },
+        "breed_2": { "type": "STRING" },
+        "weight_2_kg": { "type": "STRING" },
+        "breed_3": { "type": "STRING" },
+        "weight_3_kg": { "type": "STRING" }
+    }
+}
+                    </textarea>
+                </div>
+            </div>
+
+            <!-- 4. User Prompt Section (The Task) -->
+            <div class="mb-6">
+                <label for="userPrompt" class="block text-sm font-medium text-gray-700 dark:text-violet-400 mb-2">4. User Prompt (Task)</label>
+                <textarea id="userPrompt" rows="2" class="w-full rounded-lg p-3 text-sm border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-700 text-gray-800 dark:text-white focus:ring-violet-500 focus:border-violet-500" placeholder="Example: Give me a recipe for quick scrambled eggs.">
+List three common dog breeds and their average adult weight in kilograms.
+                </textarea>
+            </div>
+
+            <!-- 5. Action Button -->
+            <div class="flex justify-center">
+                <button id="runAgentBtn" class="bg-violet-600 hover:bg-violet-700 text-white font-semibold py-3 px-8 rounded-lg shadow-lg disabled:opacity-50 transition-colors duration-200 flex items-center justify-center">
+                    <span id="buttonText">Run Agent</span>
+                    <div id="loadingSpinner" class="loading-spinner ml-3 hidden"></div>
+                </button>
+            </div>
+            
+             <!-- 6. Error Message -->
+            <div id="errorMessage" class="mt-4 p-3 bg-red-100 dark:bg-red-800 text-red-800 dark:text-white rounded-lg hidden">
+                An error occurred. Please try again.
+            </div>
+
+            <!-- 7. Output Section (Results) -->
+            <div id="outputContainer" class="mt-8 pt-6 border-t border-gray-200 dark:border-slate-700 hidden">
+                <h2 class="text-xl font-bold text-gray-800 dark:text-white mb-4">Agent Response</h2>
+                <div id="agentOutput" class="p-4 rounded-lg border border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-mono text-sm">
+                    <!-- Agent response will go here -->
+                </div>
+                
+                <h3 class="text-lg font-semibold text-violet-600 dark:text-violet-400 mt-6 mb-2">Sources (Grounding)</h3>
+                <ul id="sourceList" class="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                    <!-- Sources will be injected here -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. API Configuration (API Key Required Here) ---
+        const MODEL_NAME = "gemini-2.5-flash-preview-05-20";
+        // *** IMPORTANT: INSERT YOUR GEMINI API KEY HERE ***
+        const apiKey = "AIzaSyDy63oqdssvVJx2xEOVj2olp3ZNArWZM2U"; 
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+
+        // --- 2. DOM Elements Mapping ---
+        const systemInstructionEl = document.getElementById('systemInstruction');
+        const userPromptEl = document.getElementById('userPrompt');
+        const responseTypeEl = document.getElementById('responseType');
+        const jsonSchemaEl = document.getElementById('jsonSchema');
+        const jsonSchemaContainer = document.getElementById('jsonSchemaContainer');
+        const runAgentBtn = document.getElementById('runAgentBtn');
+        const buttonText = document.getElementById('buttonText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const outputContainer = document.getElementById('outputContainer');
+        const agentOutputEl = document.getElementById('agentOutput');
+        const errorMessageEl = document.getElementById('errorMessage');
+        const sourceListEl = document.getElementById('sourceList');
+        
+        // Function to toggle the JSON schema input box visibility
+        responseTypeEl.addEventListener('change', () => {
+            if (responseTypeEl.value === 'json') {
+                jsonSchemaContainer.classList.remove('hidden');
+                agentOutputEl.classList.add('font-mono');
+            } else {
+                jsonSchemaContainer.classList.add('hidden');
+                agentOutputEl.classList.remove('font-mono');
+            }
+        });
+        
+        // Check for environment API key presence to enable the button
+        function checkAuthAndEnable() {
+            // Check if API Key is set either directly or via environment variable
+            const keyIsSet = apiKey.trim() !== "" || typeof __api_key !== 'undefined';
+
+            if (keyIsSet) {
+                runAgentBtn.disabled = false;
+                runAgentBtn.classList.add('cursor-pointer');
+            } else {
+                buttonText.textContent = "API Key Required (Insert in Code)";
+                runAgentBtn.disabled = true;
+                runAgentBtn.classList.remove('cursor-pointer');
+                errorMessageEl.textContent = "Please insert your Gemini API Key on line 139 of agent_builder.html to enable the agent.";
+                errorMessageEl.classList.remove('hidden');
+            }
+        }
+        
+        // --- UTILITY FUNCTIONS FOR API COMMUNICATION ---
+        
+        /**
+         * Parses the API response and safely extracts the generated text and grounding sources.
+         * @param {Object} result - The raw JSON response from the Gemini API.
+         * @returns {{text: string, sources: Array<{uri: string, title: string}>}}
+         */
+        function parseAgentResponse(result) {
+            const candidate = result.candidates?.[0];
+            const text = candidate?.content?.parts?.[0]?.text || "No response text generated.";
+            let sources = [];
+
+            const groundingMetadata = candidate?.groundingMetadata;
+            if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                sources = groundingMetadata.groundingAttributions
+                    .map(attribution => ({
+                        uri: attribution.web?.uri,
+                        title: attribution.web?.title,
+                    }))
+                    .filter(source => source.uri && source.title)
+                    .filter((source, index, self) =>
+                        // Deduplicate sources based on URI
+                        index === self.findIndex((t) => (t.uri === source.uri))
+                    );
+            }
+
+            return { text, sources };
+        }
+
+        /**
+         * Calls the Gemini API with exponential backoff for retries (mandatory best practice).
+         * @param {Object} payload - The request body containing the agent's instructions.
+         * @param {number} retries - The number of times to attempt the API call.
+         * @returns {Promise<Object>} The final API response JSON object.
+         */
+        async function callApiWithBackoff(payload, retries = 3) {
+            const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const headers = { 'Content-Type': 'application/json' };
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: headers,
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (response.ok) {
+                        return await response.json();
+                    } else if (response.status === 429 && i < retries - 1) {
+                        const waitTime = Math.pow(2, i) * 1000;
+                        await delay(waitTime);
+                        continue;
+                    } else {
+                        // --- DEBUGGING STEP: LOG MALFORMED PAYLOAD ON 400/OTHER ERRORS ---
+                        const errorText = await response.text();
+                        console.error("API Error (" + response.status + ") - Invalid JSON Payload Sent:", JSON.stringify(payload, null, 2));
+                        console.error("API Error Response Body:", errorText);
+                        throw new Error(`API failed with status ${response.status}. Details in console.`);
+                    }
+                } catch (error) {
+                    if (i === retries - 1) {
+                        throw error;
+                    }
+                    const waitTime = Math.pow(2, i) * 1000;
+                    await delay(waitTime);
+                }
+            }
+        }
+        
+        // --- 3. The Agent's Blueprint (Payload Builder and API Call) ---
+        async function runAgent() {
+            // Clear previous results and errors
+            errorMessageEl.classList.add('hidden');
+            outputContainer.classList.add('hidden');
+            agentOutputEl.textContent = '';
+            sourceListEl.innerHTML = '';
+
+            const systemInstruction = systemInstructionEl.value.trim();
+            const userQuery = userPromptEl.value.trim();
+            const responseType = responseTypeEl.value;
+            
+            if (!userQuery) {
+                errorMessageEl.textContent = "Error: Please enter a prompt in the User Prompt box.";
+                errorMessageEl.classList.remove('hidden');
+                return;
+            }
+
+            // Set loading state
+            runAgentBtn.disabled = true;
+            buttonText.textContent = "Agent is Thinking...";
+            loadingSpinner.classList.remove('hidden');
+            
+            // --- CORE PAYLOAD INITIALIZATION ---
+            let payload = {
+                contents: [{ parts: [{ text: userQuery }] }],
+                // By default, assume standard text output with search tool enabled
+                tools: [{ "google_search": {} }],
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                },
+            };
+            
+            // --- CONDITIONAL JSON CONFIGURATION (The Structured Output Tool) ---
+            if (responseType === 'json') {
+                try {
+                    const responseSchema = JSON.parse(jsonSchemaEl.value.trim());
+                    
+                    payload.generationConfig = {
+                        responseMimeType: "application/json",
+                        responseSchema: responseSchema
+                    };
+                    
+                    // *** CRITICAL FIX: REMOVE THE SEARCH TOOL WHEN USING JSON MimeType ***
+                    delete payload.tools; 
+                    
+                    // CRITICAL: Overwrite the system instruction to explicitly demand JSON and silence other output
+                    payload.systemInstruction.parts[0].text = 
+                        systemInstruction + "\n\nCRITICAL: You must return the response as a single, valid JSON object that strictly adheres to the provided schema. Do not include any surrounding text or markdown (e.g., no ```json block).";
+
+                } catch (e) {
+                    errorMessageEl.textContent = "JSON Schema Error: The schema provided in Box 3 is invalid JSON. Check console for parsing details.";
+                    console.error("JSON Schema Parsing Error:", e);
+                    errorMessageEl.classList.remove('hidden');
+                    runAgentBtn.disabled = false;
+                    buttonText.textContent = "Run Agent";
+                    loadingSpinner.classList.add('hidden');
+                    return;
+                }
+            }
+            
+            // --- STEP 4: Send the Payload and Process Results ---
+            try {
+                const result = await callApiWithBackoff(payload);
+                const { text, sources } = parseAgentResponse(result);
+                
+                // Display the results
+                agentOutputEl.textContent = text;
+                outputContainer.classList.remove('hidden');
+
+                // Decide whether to show sources or the explanation about the constraint
+                sourceListEl.innerHTML = '';
+                if (responseType === 'text' && sources.length > 0) {
+                    sources.forEach(source => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<a href="${source.uri}" target="_blank" class="text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-300 transition-colors underline">${source.title}</a>`;
+                        sourceListEl.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = responseType === 'json' ? "Sources disabled for Structured JSON mode due to model constraints (JSON + Search Tool conflict)." : "No external search sources were cited for this response.";
+                    sourceListEl.appendChild(li);
+                }
+
+            } catch (error) {
+                 // Error handled in callApiWithBackoff now
+            } finally {
+                // Always reset state regardless of success or failure
+                runAgentBtn.disabled = false;
+                buttonText.textContent = "Run Agent";
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        // --- Initialization ---
+        window.onload = () => {
+             checkAuthAndEnable();
+             runAgentBtn.addEventListener('click', runAgent);
+             // Trigger change event to hide/show JSON schema container based on default selection
+             responseTypeEl.dispatchEvent(new Event('change')); 
+        };
+        
+    </script>
+
+</body>
+</html>
